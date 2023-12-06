@@ -89,7 +89,7 @@ async function applyMigration() {
 
 (async () => {
   let err = false;
-  for (let fn of [checkEnv, checkConnection, checkDatabaseVersion, checkV1Tables, applyMigration]) {
+  for (let fn of [checkEnv, checkConnection, checkDatabaseVersion, checkV1Tables]) {
     try {
       await fn();
     } catch (e) {
