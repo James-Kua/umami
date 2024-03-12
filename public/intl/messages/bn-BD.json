@@ -29,19 +29,13 @@
       "value": "Add description"
     }
   ],
-  "label.add-member": [
-    {
-      "type": 0,
-      "value": "Add member"
-    }
-  ],
   "label.add-website": [
     {
       "type": 0,
       "value": "ওয়েবসাইট যুক্ত করুন"
     }
   ],
-  "label.administrator": [
+  "label.admin": [
     {
       "type": 0,
       "value": "অ্যাডমিন"
@@ -269,12 +263,6 @@
       "value": "মুছে ফেলুন"
     }
   ],
-  "label.delete-report": [
-    {
-      "type": 0,
-      "value": "Delete report"
-    }
-  ],
   "label.delete-team": [
     {
       "type": 0,
@@ -357,12 +345,6 @@
     {
       "type": 0,
       "value": "Edit dashboard"
-    }
-  ],
-  "label.edit-member": [
-    {
-      "type": 0,
-      "value": "Edit member"
     }
   ],
   "label.enable-share-url": [
@@ -585,22 +567,10 @@
       "value": "লগ আউট"
     }
   ],
-  "label.manage": [
-    {
-      "type": 0,
-      "value": "Manage"
-    }
-  ],
   "label.max": [
     {
       "type": 0,
       "value": "Max"
-    }
-  ],
-  "label.member": [
-    {
-      "type": 0,
-      "value": "Member"
     }
   ],
   "label.members": [
@@ -627,12 +597,6 @@
       "value": "আরও"
     }
   ],
-  "label.my-account": [
-    {
-      "type": 0,
-      "value": "My account"
-    }
-  ],
   "label.my-websites": [
     {
       "type": 0,
@@ -655,46 +619,6 @@
     {
       "type": 0,
       "value": "কিছুই না"
-    }
-  ],
-  "label.number-of-records": [
-    {
-      "type": 1,
-      "value": "x"
-    },
-    {
-      "type": 0,
-      "value": " "
-    },
-    {
-      "offset": 0,
-      "options": {
-        "one": {
-          "value": [
-            {
-              "type": 0,
-              "value": "record"
-            }
-          ]
-        },
-        "other": {
-          "value": [
-            {
-              "type": 0,
-              "value": "records"
-            }
-          ]
-        }
-      },
-      "pluralType": "cardinal",
-      "type": 6,
-      "value": "x"
-    }
-  ],
-  "label.ok": [
-    {
-      "type": 0,
-      "value": "OK"
     }
   ],
   "label.os": [
@@ -839,12 +763,6 @@
       "value": "Remove"
     }
   ],
-  "label.remove-member": [
-    {
-      "type": 0,
-      "value": "Remove member"
-    }
-  ],
   "label.reports": [
     {
       "type": 0,
@@ -911,22 +829,10 @@
       "value": "Search"
     }
   ],
-  "label.select": [
-    {
-      "type": 0,
-      "value": "Select"
-    }
-  ],
   "label.select-date": [
     {
       "type": 0,
       "value": "Select date"
-    }
-  ],
-  "label.select-role": [
-    {
-      "type": 0,
-      "value": "Select role"
     }
   ],
   "label.select-website": [
@@ -977,6 +883,12 @@
       "value": "Team"
     }
   ],
+  "label.team-guest": [
+    {
+      "type": 0,
+      "value": "Team guest"
+    }
+  ],
   "label.team-id": [
     {
       "type": 0,
@@ -999,12 +911,6 @@
     {
       "type": 0,
       "value": "Team owner"
-    }
-  ],
-  "label.team-view-only": [
-    {
-      "type": 0,
-      "value": "Team view only"
     }
   ],
   "label.team-websites": [
@@ -1083,18 +989,6 @@
     {
       "type": 0,
       "value": "ট্র্যাকিং কোড"
-    }
-  ],
-  "label.transfer": [
-    {
-      "type": 0,
-      "value": "Transfer"
-    }
-  ],
-  "label.transfer-website": [
-    {
-      "type": 0,
-      "value": "Transfer website"
     }
   ],
   "label.true": [
@@ -1229,20 +1123,6 @@
       "value": "Yesterday"
     }
   ],
-  "message.action-confirmation": [
-    {
-      "type": 0,
-      "value": "Type "
-    },
-    {
-      "type": 1,
-      "value": "confirmation"
-    },
-    {
-      "type": 0,
-      "value": " in the box below to confirm."
-    }
-  ],
   "message.active-users": [
     {
       "type": 1,
@@ -1305,20 +1185,6 @@
       "value": "?"
     }
   ],
-  "message.confirm-remove": [
-    {
-      "type": 0,
-      "value": "Are you sure you want to remove "
-    },
-    {
-      "type": 1,
-      "value": "target"
-    },
-    {
-      "type": 0,
-      "value": "?"
-    }
-  ],
   "message.confirm-reset": [
     {
       "type": 0,
@@ -1333,10 +1199,32 @@
       "value": " এর পরিসংখ্যান পুনরায় সেট করতে চান?"
     }
   ],
-  "message.delete-team-warning": [
+  "message.delete-account": [
     {
       "type": 0,
-      "value": "Deleting a team will also delete all team websites."
+      "value": "To delete this account, type "
+    },
+    {
+      "type": 1,
+      "value": "confirmation"
+    },
+    {
+      "type": 0,
+      "value": " in the box below to confirm."
+    }
+  ],
+  "message.delete-website": [
+    {
+      "type": 0,
+      "value": "To delete this website, type "
+    },
+    {
+      "type": 1,
+      "value": "confirmation"
+    },
+    {
+      "type": 0,
+      "value": " in the box below to confirm."
     }
   ],
   "message.delete-website-warning": [
@@ -1529,40 +1417,10 @@
       "value": "ট্র্যাকিং কোড"
     }
   ],
-  "message.transfer-team-website-to-user": [
-    {
-      "type": 0,
-      "value": "Transfer this website to your account?"
-    }
-  ],
-  "message.transfer-user-website-to-team": [
-    {
-      "type": 0,
-      "value": "Select the team to transfer this website to."
-    }
-  ],
-  "message.transfer-website": [
-    {
-      "type": 0,
-      "value": "Transfer website ownership to your account or another team."
-    }
-  ],
-  "message.triggered-event": [
-    {
-      "type": 0,
-      "value": "Triggered event"
-    }
-  ],
   "message.user-deleted": [
     {
       "type": 0,
       "value": "User deleted."
-    }
-  ],
-  "message.viewed-page": [
-    {
-      "type": 0,
-      "value": "Viewed page"
     }
   ],
   "message.visitor-log": [
@@ -1597,12 +1455,6 @@
     {
       "type": 0,
       "value": " এর মধ্যে।"
-    }
-  ],
-  "message.visitors-dropped-off": [
-    {
-      "type": 0,
-      "value": "Visitors dropped off"
     }
   ]
 }

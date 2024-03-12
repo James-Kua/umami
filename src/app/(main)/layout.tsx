@@ -1,4 +1,3 @@
-import { Metadata } from 'next';
 import App from './App';
 import NavBar from './NavBar';
 import Page from 'components/layout/Page';
@@ -18,10 +17,3 @@ export default function ({ children }) {
     </App>
   );
 }
-
-export const metadata: Metadata = {
-  title: {
-    template: '%s | Umami',
-    default: 'Umami',
-  },
-};

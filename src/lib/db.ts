@@ -17,22 +17,26 @@ export function getDatabaseType(url = process.env.DATABASE_URL) {
     return POSTGRESQL;
   }
 
+  if (process.env.CLICKHOUSE_URL) {
+    return CLICKHOUSE;
+  }
+
   return type;
 }
 
 export async function runQuery(queries: any) {
-  if (process.env.CLICKHOUSE_URL) {
+  const db = getDatabaseType(process.env.CLICKHOUSE_URL || process.env.DATABASE_URL);
+
+  if (db === POSTGRESQL || db === MYSQL) {
+    return queries[PRISMA]();
+  }
+
+  if (db === CLICKHOUSE) {
     if (queries[KAFKA]) {
       return queries[KAFKA]();
     }
 
     return queries[CLICKHOUSE]();
-  }
-
-  const db = getDatabaseType();
-
-  if (db === POSTGRESQL || db === MYSQL) {
-    return queries[PRISMA]();
   }
 }
 

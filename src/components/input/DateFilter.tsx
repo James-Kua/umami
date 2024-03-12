@@ -2,34 +2,34 @@ import { useState } from 'react';
 import { Icon, Modal, Dropdown, Item, Text, Flexbox } from 'react-basics';
 import { endOfYear, isSameDay } from 'date-fns';
 import DatePickerForm from 'components/metrics/DatePickerForm';
-import { useLocale, useMessages } from 'components/hooks';
+import useLocale from 'components/hooks/useLocale';
+import useMessages from 'components/hooks/useMessages';
 import Icons from 'components/icons';
-import { formatDate, parseDateValue } from 'lib/date';
+import { formatDate } from 'lib/date';
 
 export interface DateFilterProps {
   value: string;
   startDate: Date;
   endDate: Date;
-  offset?: number;
   className?: string;
   onChange?: (value: string) => void;
+  selectedUnit?: string;
   showAllTime?: boolean;
   alignment?: 'start' | 'center' | 'end';
 }
 
 export function DateFilter({
+  value,
   startDate,
   endDate,
-  value,
-  offset = 0,
   className,
   onChange,
+  selectedUnit,
   showAllTime = false,
   alignment = 'end',
 }: DateFilterProps) {
   const { formatMessage, labels } = useMessages();
   const [showPicker, setShowPicker] = useState(false);
-  const { locale } = useLocale();
 
   const options = [
     { label: formatMessage(labels.today), value: '1day' },
@@ -76,6 +76,19 @@ export function DateFilter({
     },
   ].filter(n => n);
 
+  const renderValue = (value: string) => {
+    return value.startsWith('range') ? (
+      <CustomRange
+        startDate={startDate}
+        endDate={endDate}
+        selectedUnit={selectedUnit}
+        onClick={() => handleChange('custom')}
+      />
+    ) : (
+      options.find(e => e.value === value).label
+    );
+  };
+
   const handleChange = (value: string) => {
     if (value === 'custom') {
       setShowPicker(true);
@@ -90,31 +103,6 @@ export function DateFilter({
   };
 
   const handleClose = () => setShowPicker(false);
-
-  const renderValue = (value: string) => {
-    const { unit } = parseDateValue(value) || {};
-
-    if (offset && unit === 'year') {
-      return formatDate(startDate, 'yyyy', locale);
-    }
-
-    if (offset && unit === 'month') {
-      return formatDate(startDate, 'MMMM yyyy', locale);
-    }
-
-    if (value.startsWith('range') || offset) {
-      return (
-        <CustomRange
-          startDate={startDate}
-          endDate={endDate}
-          unit={unit}
-          onClick={() => handleChange('custom')}
-        />
-      );
-    }
-
-    return options.find(e => e.value === value).label;
-  };
 
   return (
     <>
@@ -149,10 +137,10 @@ export function DateFilter({
   );
 }
 
-const CustomRange = ({ startDate, endDate, unit, onClick }) => {
+const CustomRange = ({ startDate, endDate, selectedUnit, onClick }) => {
   const { locale } = useLocale();
 
-  const monthFormat = unit === 'month';
+  const monthFormat = +selectedUnit?.num === 1 && selectedUnit?.unit === 'month';
 
   function handleClick(e) {
     e.stopPropagation();

@@ -1,10 +1,14 @@
-import { useAuth, useCors, useValidate } from 'lib/middleware';
-import { NextApiRequestQueryBody } from 'lib/types';
+import { useCors, useValidate } from 'lib/middleware';
+import { NextApiRequestQueryBody, SearchFilter } from 'lib/types';
 import { pageInfo } from 'lib/schema';
 import { NextApiResponse } from 'next';
 import { methodNotAllowed } from 'next-basics';
-import userTeamsRoute from 'pages/api/users/[userId]/teams';
+import userTeams from 'pages/api/users/[id]/teams';
 import * as yup from 'yup';
+
+export interface MyTeamsRequestQuery extends SearchFilter {
+  id: string;
+}
 
 const schema = {
   GET: yup.object().shape({
@@ -12,15 +16,17 @@ const schema = {
   }),
 };
 
-export default async (req: NextApiRequestQueryBody, res: NextApiResponse) => {
+export default async (
+  req: NextApiRequestQueryBody<MyTeamsRequestQuery, any>,
+  res: NextApiResponse,
+) => {
   await useCors(req, res);
-  await useAuth(req, res);
   await useValidate(schema, req, res);
 
   if (req.method === 'GET') {
-    req.query.userId = req.auth.user.id;
+    req.query.id = req.auth.user.id;
 
-    return userTeamsRoute(req, res);
+    return userTeams(req, res);
   }
 
   return methodNotAllowed(res);

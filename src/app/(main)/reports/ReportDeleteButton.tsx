@@ -1,6 +1,7 @@
 import { Button, Icon, Icons, Modal, ModalTrigger, Text } from 'react-basics';
-import { useApi, useMessages, useModified } from 'components/hooks';
-import ConfirmationForm from 'components/common/ConfirmationForm';
+import ConfirmDeleteForm from 'components/common/ConfirmDeleteForm';
+import { useApi, useMessages } from 'components/hooks';
+import { setValue } from 'store/cache';
 
 export function ReportDeleteButton({
   reportId,
@@ -11,17 +12,14 @@ export function ReportDeleteButton({
   reportName: string;
   onDelete?: () => void;
 }) {
-  const { formatMessage, labels, messages, FormattedMessage } = useMessages();
+  const { formatMessage, labels } = useMessages();
   const { del, useMutation } = useApi();
-  const { mutate, isPending, error } = useMutation({
-    mutationFn: reportId => del(`/reports/${reportId}`),
-  });
-  const { touch } = useModified();
+  const { mutate } = useMutation({ mutationFn: reportId => del(`/reports/${reportId}`) });
 
   const handleConfirm = (close: () => void) => {
     mutate(reportId as any, {
       onSuccess: () => {
-        touch('reports');
+        setValue('reports', Date.now());
         onDelete?.();
         close();
       },
@@ -36,20 +34,12 @@ export function ReportDeleteButton({
         </Icon>
         <Text>{formatMessage(labels.delete)}</Text>
       </Button>
-      <Modal title={formatMessage(labels.deleteReport)}>
-        {(close: () => void) => (
-          <ConfirmationForm
-            message={
-              <FormattedMessage
-                {...messages.confirmDelete}
-                values={{ target: <b>{reportName}</b> }}
-              />
-            }
-            isLoading={isPending}
-            error={error}
+      <Modal>
+        {close => (
+          <ConfirmDeleteForm
+            name={reportName}
             onConfirm={handleConfirm.bind(null, close)}
             onClose={close}
-            buttonLabel={formatMessage(labels.delete)}
           />
         )}
       </Modal>

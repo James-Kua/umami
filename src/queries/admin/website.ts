@@ -1,67 +1,124 @@
 import { Prisma, Website } from '@prisma/client';
 import cache from 'lib/cache';
+import { ROLES } from 'lib/constants';
 import prisma from 'lib/prisma';
 import { FilterResult, WebsiteSearchFilter } from 'lib/types';
-import WebsiteFindManyArgs = Prisma.WebsiteFindManyArgs;
 
-async function findWebsite(criteria: Prisma.WebsiteFindUniqueArgs): Promise<Website> {
-  return prisma.client.website.findUnique(criteria);
-}
-
-export async function getWebsite(websiteId: string) {
-  return findWebsite({
-    where: {
-      id: websiteId,
-    },
+async function getWebsite(where: Prisma.WebsiteWhereUniqueInput): Promise<Website> {
+  return prisma.client.website.findUnique({
+    where,
   });
 }
 
-export async function getSharedWebsite(shareId: string) {
-  return findWebsite({
-    where: {
-      shareId,
-    },
-  });
+export async function getWebsiteById(id: string) {
+  return getWebsite({ id });
+}
+
+export async function getWebsiteByShareId(shareId: string) {
+  return getWebsite({ shareId });
 }
 
 export async function getWebsites(
-  criteria: WebsiteFindManyArgs,
   filters: WebsiteSearchFilter,
-): Promise<FilterResult<Website[]>> {
-  const { query } = filters;
+  options?: { include?: Prisma.WebsiteInclude },
+): Promise<FilterResult<Website>> {
+  const { userId, teamId, includeTeams, onlyTeams, query } = filters;
+  const mode = prisma.getSearchMode();
 
   const where: Prisma.WebsiteWhereInput = {
-    ...criteria.where,
-    ...prisma.getSearchParameters(query, [
-      {
-        name: 'contains',
+    ...(teamId && {
+      teamWebsite: {
+        some: {
+          teamId,
+        },
       },
-      { domain: 'contains' },
-    ]),
-    deletedAt: null,
+    }),
+    AND: [
+      {
+        OR: [
+          {
+            ...(userId &&
+              !onlyTeams && {
+                userId,
+              }),
+          },
+          {
+            ...((includeTeams || onlyTeams) && {
+              AND: [
+                {
+                  teamWebsite: {
+                    some: {
+                      team: {
+                        teamUser: {
+                          some: {
+                            userId,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                {
+                  userId: {
+                    not: userId,
+                  },
+                },
+              ],
+            }),
+          },
+        ],
+      },
+      {
+        OR: query
+          ? [
+              {
+                name: { contains: query, ...mode },
+              },
+              {
+                domain: { contains: query, ...mode },
+              },
+            ]
+          : [],
+      },
+    ],
   };
 
-  return prisma.pagedQuery('website', { ...criteria, where }, filters);
-}
-
-export async function getAllWebsites(userId: string) {
-  return prisma.client.website.findMany({
-    where: {
-      userId,
-    },
+  const [pageFilters, getParameters] = prisma.getPageFilters({
+    orderBy: 'name',
+    ...filters,
   });
+
+  const websites = await prisma.client.website.findMany({
+    where: {
+      ...where,
+      deletedAt: null,
+    },
+    ...pageFilters,
+    ...(options?.include && { include: options.include }),
+  });
+
+  const count = await prisma.client.website.count({ where: { ...where, deletedAt: null } });
+
+  return { data: websites, count, ...getParameters };
 }
 
-export async function getUserWebsites(
+export async function getWebsitesByUserId(
   userId: string,
   filters?: WebsiteSearchFilter,
-): Promise<FilterResult<Website[]>> {
+): Promise<FilterResult<Website>> {
   return getWebsites(
+    { userId, ...filters },
     {
-      where: {
-        userId,
-      },
       include: {
+        teamWebsite: {
+          include: {
+            team: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
         user: {
           select: {
             username: true,
@@ -70,24 +127,33 @@ export async function getUserWebsites(
         },
       },
     },
-    {
-      orderBy: 'name',
-      ...filters,
-    },
   );
 }
 
-export async function getTeamWebsites(
+export async function getWebsitesByTeamId(
   teamId: string,
   filters?: WebsiteSearchFilter,
-): Promise<FilterResult<Website[]>> {
+): Promise<FilterResult<Website>> {
   return getWebsites(
     {
-      where: {
-        teamId,
-      },
+      teamId,
+      ...filters,
+      includeTeams: true,
+    },
+    {
       include: {
-        createUser: {
+        teamWebsite: {
+          include: {
+            team: {
+              include: {
+                teamUser: {
+                  where: { role: ROLES.teamOwner },
+                },
+              },
+            },
+          },
+        },
+        user: {
           select: {
             id: true,
             username: true,
@@ -95,8 +161,78 @@ export async function getTeamWebsites(
         },
       },
     },
-    filters,
   );
+}
+
+export async function getUserWebsites(
+  userId: string,
+  options?: { includeTeams: boolean },
+): Promise<Website[]> {
+  const { rawQuery } = prisma;
+
+  if (options?.includeTeams) {
+    const websites = await rawQuery(
+      `
+      select
+        website_id as "id",
+        name,
+        domain,
+        share_id as "shareId",
+        reset_at as "resetAt",
+        user_id as "userId",
+        created_at as "createdAt",
+        updated_at as "updatedAt",
+        deleted_at as "deletedAt",
+        null as "teamId",
+        null as "teamName"
+      from website
+      where user_id = {{userId::uuid}}
+        and deleted_at is null
+      union
+      select           
+        w.website_id as "id",
+        w.name,
+        w.domain,
+        w.share_id as "shareId",
+        w.reset_at as "resetAt",
+        w.user_id as "userId",
+        w.created_at as "createdAt",
+        w.updated_at as "updatedAt",
+        w.deleted_at as "deletedAt",
+        t.team_id as "teamId",
+        t.name as "teamName"
+      from website w
+      inner join team_website tw
+        on tw.website_id = w.website_id
+      inner join team t
+        on t.team_id = tw.team_id
+      inner join team_user tu 
+        on tu.team_id = tw.team_id
+      where tu.user_id = {{userId::uuid}}
+        and w.deleted_at is null
+      `,
+      { userId },
+    );
+
+    return websites.reduce((arr, item) => {
+      if (!arr.find(({ id }) => id === item.id)) {
+        return arr.concat(item);
+      }
+      return arr;
+    }, []);
+  }
+
+  return prisma.client.website.findMany({
+    where: {
+      userId,
+      deletedAt: null,
+    },
+    orderBy: [
+      {
+        name: 'asc',
+      },
+    ],
+  });
 }
 
 export async function createWebsite(
@@ -116,7 +252,7 @@ export async function createWebsite(
 }
 
 export async function updateWebsite(
-  websiteId: string,
+  websiteId,
   data: Prisma.WebsiteUpdateInput | Prisma.WebsiteUncheckedUpdateInput,
 ): Promise<Website> {
   return prisma.client.website.update({
@@ -128,7 +264,7 @@ export async function updateWebsite(
 }
 
 export async function resetWebsite(
-  websiteId: string,
+  websiteId,
 ): Promise<[Prisma.BatchPayload, Prisma.BatchPayload, Website]> {
   const { client, transaction } = prisma;
 
@@ -158,7 +294,7 @@ export async function resetWebsite(
 }
 
 export async function deleteWebsite(
-  websiteId: string,
+  websiteId,
 ): Promise<[Prisma.BatchPayload, Prisma.BatchPayload, Website]> {
   const { client, transaction } = prisma;
   const cloudMode = process.env.CLOUD_MODE;
@@ -173,13 +309,18 @@ export async function deleteWebsite(
     client.session.deleteMany({
       where: { websiteId },
     }),
+    client.teamWebsite.deleteMany({
+      where: {
+        websiteId,
+      },
+    }),
     client.report.deleteMany({
       where: {
         websiteId,
       },
     }),
     cloudMode
-      ? client.website.update({
+      ? prisma.client.website.update({
           data: {
             deletedAt: new Date(),
           },

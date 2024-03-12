@@ -3,14 +3,14 @@ import { httpGet, setItem } from 'next-basics';
 import { LOCALE_CONFIG } from 'lib/constants';
 import { getDateLocale, getTextDirection } from 'lib/lang';
 import useStore, { setLocale } from 'store/app';
-import { useForceUpdate } from './useForceUpdate';
-import enUS from '../../../public/intl/country/en-US.json';
+import useForceUpdate from 'components/hooks/useForceUpdate';
+import enUS from 'public/intl/country/en-US.json';
 
 const messages = {
   'en-US': enUS,
 };
 
-const selector = (state: { locale: any }) => state.locale;
+const selector = state => state.locale;
 
 export function useLocale() {
   const locale = useStore(selector);
@@ -18,7 +18,7 @@ export function useLocale() {
   const dir = getTextDirection(locale);
   const dateLocale = getDateLocale(locale);
 
-  async function loadMessages(locale: string) {
+  async function loadMessages(locale) {
     const { ok, data } = await httpGet(`${process.env.basePath}/intl/messages/${locale}.json`);
 
     if (ok) {
@@ -26,7 +26,7 @@ export function useLocale() {
     }
   }
 
-  async function saveLocale(value: string) {
+  async function saveLocale(value) {
     if (!messages[value]) {
       await loadMessages(value);
     }

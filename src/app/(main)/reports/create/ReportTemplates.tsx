@@ -1,3 +1,4 @@
+'use client';
 import Link from 'next/link';
 import { Button, Icons, Text, Icon } from 'react-basics';
 import PageHeader from 'components/layout/PageHeader';
@@ -5,46 +6,7 @@ import Funnel from 'assets/funnel.svg';
 import Lightbulb from 'assets/lightbulb.svg';
 import Magnet from 'assets/magnet.svg';
 import styles from './ReportTemplates.module.css';
-import { useMessages, useTeamUrl } from 'components/hooks';
-
-export function ReportTemplates({ showHeader = true }: { showHeader?: boolean }) {
-  const { formatMessage, labels } = useMessages();
-  const { renderTeamUrl } = useTeamUrl();
-
-  const reports = [
-    {
-      title: formatMessage(labels.insights),
-      description: formatMessage(labels.insightsDescription),
-      url: renderTeamUrl('/reports/insights'),
-      icon: <Lightbulb />,
-    },
-    {
-      title: formatMessage(labels.funnel),
-      description: formatMessage(labels.funnelDescription),
-      url: renderTeamUrl('/reports/funnel'),
-      icon: <Funnel />,
-    },
-    {
-      title: formatMessage(labels.retention),
-      description: formatMessage(labels.retentionDescription),
-      url: renderTeamUrl('/reports/retention'),
-      icon: <Magnet />,
-    },
-  ];
-
-  return (
-    <>
-      {showHeader && <PageHeader title={formatMessage(labels.reports)} />}
-      <div className={styles.reports}>
-        {reports.map(({ title, description, url, icon }) => {
-          return (
-            <ReportItem key={title} icon={icon} title={title} description={description} url={url} />
-          );
-        })}
-      </div>
-    </>
-  );
-}
+import { useMessages } from 'components/hooks';
 
 function ReportItem({ title, description, url, icon }) {
   const { formatMessage, labels } = useMessages();
@@ -67,6 +29,44 @@ function ReportItem({ title, description, url, icon }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+export function ReportTemplates({ showHeader = true }) {
+  const { formatMessage, labels } = useMessages();
+
+  const reports = [
+    {
+      title: formatMessage(labels.insights),
+      description: formatMessage(labels.insightsDescription),
+      url: '/reports/insights',
+      icon: <Lightbulb />,
+    },
+    {
+      title: formatMessage(labels.funnel),
+      description: formatMessage(labels.funnelDescription),
+      url: '/reports/funnel',
+      icon: <Funnel />,
+    },
+    {
+      title: formatMessage(labels.retention),
+      description: formatMessage(labels.retentionDescription),
+      url: '/reports/retention',
+      icon: <Magnet />,
+    },
+  ];
+
+  return (
+    <>
+      {showHeader && <PageHeader title={formatMessage(labels.reports)} />}
+      <div className={styles.reports}>
+        {reports.map(({ title, description, url, icon }) => {
+          return (
+            <ReportItem key={title} icon={icon} title={title} description={description} url={url} />
+          );
+        })}
+      </div>
+    </>
   );
 }
 

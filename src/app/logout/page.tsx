@@ -1,10 +1,10 @@
-import LogoutPage from './LogoutPage';
+import Logout from './Logout';
 import { Metadata } from 'next';
 
 export default function () {
-  return <LogoutPage />;
+  return <Logout />;
 }
 
 export const metadata: Metadata = {
-  title: 'Logout',
+  title: 'Logout | umami',
 };

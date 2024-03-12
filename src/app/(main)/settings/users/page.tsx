@@ -1,9 +1,9 @@
+import UsersDataTable from './UsersDataTable';
 import { Metadata } from 'next';
-import UsersSettingsPage from './UsersSettingsPage';
 
 export default function () {
-  return <UsersSettingsPage />;
+  return <UsersDataTable />;
 }
 export const metadata: Metadata = {
-  title: 'Users',
+  title: 'Users | umami',
 };

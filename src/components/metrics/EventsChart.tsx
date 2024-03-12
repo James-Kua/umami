@@ -3,13 +3,7 @@ import { Loading } from 'react-basics';
 import { colord } from 'colord';
 import BarChart from './BarChart';
 import { getDateArray } from 'lib/date';
-import {
-  useLocale,
-  useDateRange,
-  useTimezone,
-  useNavigation,
-  useWebsiteEvents,
-} from 'components/hooks';
+import { useApi, useLocale, useDateRange, useTimezone, useNavigation } from 'components/hooks';
 import { EVENT_COLORS } from 'lib/constants';
 import { renderDateLabels, renderStatusTooltipPopup } from 'lib/charts';
 
@@ -20,29 +14,34 @@ export interface EventsChartProps {
 }
 
 export function EventsChart({ websiteId, className, token }: EventsChartProps) {
-  const [{ startDate, endDate, unit, offset }] = useDateRange(websiteId);
+  const { get, useQuery } = useApi();
+  const [{ startDate, endDate, unit, modified }] = useDateRange(websiteId);
   const { locale } = useLocale();
   const [timezone] = useTimezone();
   const {
     query: { url, event },
   } = useNavigation();
 
-  const { data, isLoading } = useWebsiteEvents(websiteId, {
-    startAt: +startDate,
-    endAt: +endDate,
-    unit,
-    timezone,
-    url,
-    event,
-    token,
-    offset,
+  const { data, isLoading } = useQuery({
+    queryKey: ['events', websiteId, modified, event],
+    queryFn: () =>
+      get(`/websites/${websiteId}/events`, {
+        startAt: +startDate,
+        endAt: +endDate,
+        unit,
+        timezone,
+        url,
+        event,
+        token,
+      }),
+    enabled: !!websiteId,
   });
 
   const datasets = useMemo(() => {
     if (!data) return [];
     if (isLoading) return data;
 
-    const map = (data as any[]).reduce((obj, { x, t, y }) => {
+    const map = data.reduce((obj, { x, t, y }) => {
       if (!obj[x]) {
         obj[x] = [];
       }
@@ -76,12 +75,12 @@ export function EventsChart({ websiteId, className, token }: EventsChartProps) {
   return (
     <BarChart
       className={className}
-      datasets={datasets as any[]}
+      datasets={datasets}
       unit={unit}
-      stacked={true}
+      loading={isLoading}
+      stacked
       renderXLabel={renderDateLabels(unit, locale)}
       renderTooltipPopup={renderStatusTooltipPopup(unit, locale)}
-      isLoading={isLoading}
     />
   );
 }

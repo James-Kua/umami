@@ -6,7 +6,7 @@ export function useNavigation(): {
   pathname: string;
   query: { [key: string]: string };
   router: any;
-  renderUrl: (params: any, reset?: boolean) => string;
+  makeUrl: (params: any, reset?: boolean) => string;
 } {
   const router = useRouter();
   const pathname = usePathname();
@@ -22,11 +22,11 @@ export function useNavigation(): {
     return obj;
   }, [params]);
 
-  function renderUrl(params: any, reset?: boolean) {
+  function makeUrl(params: any, reset?: boolean) {
     return reset ? pathname : buildUrl(pathname, { ...query, ...params });
   }
 
-  return { pathname, query, router, renderUrl };
+  return { pathname, query, router, makeUrl };
 }
 
 export default useNavigation;

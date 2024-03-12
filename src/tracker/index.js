@@ -18,6 +18,7 @@
   const website = attr(_data + 'website-id');
   const hostUrl = attr(_data + 'host-url');
   const autoTrack = attr(_data + 'auto-track') !== _false;
+  const dnt = attr(_data + 'do-not-track');
   const domain = attr(_data + 'domains') || '';
   const domains = domain.split(',').map(n => n.trim());
   const root = hostUrl
@@ -30,6 +31,16 @@
   const delayDuration = 300;
 
   /* Helper functions */
+
+  const hook = (_this, method, callback) => {
+    const orig = _this[method];
+
+    return (...args) => {
+      callback.apply(null, args);
+
+      return orig.apply(_this, args);
+    };
+  };
 
   const getPath = url => {
     try {
@@ -44,12 +55,30 @@
     hostname,
     screen,
     language,
-    title: encodeURIComponent(title),
-    url: encodeURI(currentUrl),
-    referrer: encodeURI(currentRef),
+    title,
+    url: currentUrl,
+    referrer: currentRef,
   });
 
-  /* Event handlers */
+  /* Tracking functions */
+
+  const doNotTrack = () => {
+    const { doNotTrack, navigator, external } = window;
+
+    const msTrackProtection = 'msTrackingProtectionEnabled';
+    const msTracking = () => {
+      return external && msTrackProtection in external && external[msTrackProtection]();
+    };
+
+    const dnt = doNotTrack || navigator.doNotTrack || navigator.msDoNotTrack || msTracking();
+
+    return dnt == '1' || dnt === 'yes';
+  };
+
+  const trackingDisabled = () =>
+    (localStorage && localStorage.getItem('umami.disabled')) ||
+    (dnt && doNotTrack()) ||
+    (domain && !domains.includes(hostname));
 
   const handlePush = (state, title, url) => {
     if (!url) return;
@@ -62,25 +91,77 @@
     }
   };
 
-  const handlePathChanges = () => {
-    const hook = (_this, method, callback) => {
-      const orig = _this[method];
+  const handleClick = () => {
+    const trackElement = el => {
+      const attr = el.getAttribute.bind(el);
+      const eventName = attr(eventNameAttribute);
 
-      return (...args) => {
-        callback.apply(null, args);
+      if (eventName) {
+        const eventData = {};
 
-        return orig.apply(_this, args);
-      };
+        el.getAttributeNames().forEach(name => {
+          const match = name.match(eventRegex);
+
+          if (match) {
+            eventData[match[1]] = attr(name);
+          }
+        });
+
+        return track(eventName, eventData);
+      }
+      return Promise.resolve();
     };
 
-    history.pushState = hook(history, 'pushState', handlePush);
-    history.replaceState = hook(history, 'replaceState', handlePush);
+    const callback = e => {
+      const findATagParent = (rootElem, maxSearchDepth) => {
+        let currentElement = rootElem;
+        for (let i = 0; i < maxSearchDepth; i++) {
+          if (currentElement.tagName === 'A') {
+            return currentElement;
+          }
+          currentElement = currentElement.parentElement;
+          if (!currentElement) {
+            return null;
+          }
+        }
+        return null;
+      };
+
+      const el = e.target;
+      const anchor = el.tagName === 'A' ? el : findATagParent(el, 10);
+
+      if (anchor) {
+        const { href, target } = anchor;
+        const external =
+          target === '_blank' ||
+          e.ctrlKey ||
+          e.shiftKey ||
+          e.metaKey ||
+          (e.button && e.button === 1);
+        const eventName = anchor.getAttribute(eventNameAttribute);
+
+        if (eventName && href) {
+          if (!external) {
+            e.preventDefault();
+          }
+          return trackElement(anchor).then(() => {
+            if (!external) location.href = href;
+          });
+        }
+      } else {
+        trackElement(el);
+      }
+    };
+
+    document.addEventListener('click', callback, true);
   };
 
-  const handleTitleChanges = () => {
-    const observer = new MutationObserver(([entry]) => {
+  const observeTitle = () => {
+    const callback = ([entry]) => {
       title = entry && entry.target ? entry.target.text : undefined;
-    });
+    };
+
+    const observer = new MutationObserver(callback);
 
     const node = document.querySelector('head > title');
 
@@ -93,87 +174,7 @@
     }
   };
 
-  const handleClicks = () => {
-    document.addEventListener(
-      'click',
-      async e => {
-        const isSpecialTag = tagName => ['BUTTON', 'A'].includes(tagName);
-
-        const trackElement = async el => {
-          const attr = el.getAttribute.bind(el);
-          const eventName = attr(eventNameAttribute);
-
-          if (eventName) {
-            const eventData = {};
-
-            el.getAttributeNames().forEach(name => {
-              const match = name.match(eventRegex);
-
-              if (match) {
-                eventData[match[1]] = attr(name);
-              }
-            });
-
-            return track(eventName, eventData);
-          }
-        };
-
-        const findParentTag = (rootElem, maxSearchDepth) => {
-          let currentElement = rootElem;
-          for (let i = 0; i < maxSearchDepth; i++) {
-            if (isSpecialTag(currentElement.tagName)) {
-              return currentElement;
-            }
-            currentElement = currentElement.parentElement;
-            if (!currentElement) {
-              return null;
-            }
-          }
-        };
-
-        const el = e.target;
-        const parentElement = isSpecialTag(el.tagName) ? el : findParentTag(el, 10);
-
-        if (parentElement) {
-          const { href, target } = parentElement;
-          const eventName = parentElement.getAttribute(eventNameAttribute);
-
-          if (eventName) {
-            if (parentElement.tagName === 'A') {
-              const external =
-                target === '_blank' ||
-                e.ctrlKey ||
-                e.shiftKey ||
-                e.metaKey ||
-                (e.button && e.button === 1);
-
-              if (eventName && href) {
-                if (!external) {
-                  e.preventDefault();
-                }
-                return trackElement(parentElement).then(() => {
-                  if (!external) location.href = href;
-                });
-              }
-            } else if (parentElement.tagName === 'BUTTON') {
-              return trackElement(parentElement);
-            }
-          }
-        } else {
-          return trackElement(el);
-        }
-      },
-      true,
-    );
-  };
-
-  /* Tracking functions */
-
-  const trackingDisabled = () =>
-    (localStorage && localStorage.getItem('umami.disabled')) ||
-    (domain && !domains.includes(hostname));
-
-  const send = async (payload, type = 'event') => {
+  const send = (payload, type = 'event') => {
     if (trackingDisabled()) return;
     const headers = {
       'Content-Type': 'application/json',
@@ -181,18 +182,14 @@
     if (typeof cache !== 'undefined') {
       headers['x-umami-cache'] = cache;
     }
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        body: JSON.stringify({ type, payload }),
-        headers,
-      });
-      const text = await res.text();
-
-      return (cache = text);
-    } catch {
-      /* empty */
-    }
+    return fetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({ type, payload }),
+      headers,
+    })
+      .then(res => res.text())
+      .then(text => (cache = text))
+      .catch(() => {}); // no-op, gulp error
   };
 
   const track = (obj, data) => {
@@ -228,9 +225,10 @@
   let initialized;
 
   if (autoTrack && !trackingDisabled()) {
-    handlePathChanges();
-    handleTitleChanges();
-    handleClicks();
+    history.pushState = hook(history, 'pushState', handlePush);
+    history.replaceState = hook(history, 'replaceState', handlePush);
+    handleClick();
+    observeTitle();
 
     const init = () => {
       if (document.readyState === 'complete' && !initialized) {

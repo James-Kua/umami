@@ -4,10 +4,10 @@ import { DATE_RANGE_CONFIG, DEFAULT_DATE_RANGE } from 'lib/constants';
 import websiteStore, { setWebsiteDateRange } from 'store/websites';
 import appStore, { setDateRange } from 'store/app';
 import { DateRange } from 'lib/types';
-import { useLocale } from './useLocale';
-import { useApi } from './queries/useApi';
+import useLocale from './useLocale';
+import useApi from './useApi';
 
-export function useDateRange(websiteId?: string): [DateRange, (value: string | DateRange) => void] {
+export function useDateRange(websiteId?: string) {
   const { get } = useApi();
   const { locale } = useLocale();
   const websiteConfig = websiteStore(state => state[websiteId]?.dateRange);
@@ -45,7 +45,10 @@ export function useDateRange(websiteId?: string): [DateRange, (value: string | D
     }
   };
 
-  return [dateRange, saveDateRange];
+  return [dateRange, saveDateRange] as [
+    { startDate: Date; endDate: Date; modified?: number },
+    (value: string | DateRange) => void,
+  ];
 }
 
 export default useDateRange;

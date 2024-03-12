@@ -1,8 +1,8 @@
 import FilterLink from 'components/common/FilterLink';
 import FilterButtons from 'components/common/FilterButtons';
 import MetricsTable, { MetricsTableProps } from './MetricsTable';
-import { useMessages } from 'components/hooks';
-import { useNavigation } from 'components/hooks';
+import useMessages from 'components/hooks/useMessages';
+import useNavigation from 'components/hooks/useNavigation';
 import { emptyFilter } from 'lib/filters';
 
 export interface PagesTableProps extends MetricsTableProps {
@@ -12,13 +12,13 @@ export interface PagesTableProps extends MetricsTableProps {
 export function PagesTable({ allowFilter, domainName, ...props }: PagesTableProps) {
   const {
     router,
-    renderUrl,
+    makeUrl,
     query: { view = 'url' },
   } = useNavigation();
   const { formatMessage, labels } = useMessages();
 
   const handleSelect = (key: any) => {
-    router.push(renderUrl({ view: key }), { scroll: true });
+    router.push(makeUrl({ view: key }), { scroll: true });
   };
 
   const buttons = [

@@ -4,9 +4,8 @@ import { useAuth, useValidate } from 'lib/middleware';
 import { NextApiRequestQueryBody } from 'lib/types';
 import { NextApiResponse } from 'next';
 import { methodNotAllowed, notFound, ok } from 'next-basics';
-import { createTeamUser, findTeam, getTeamUser } from 'queries';
+import { createTeamUser, getTeamByAccessCode, getTeamUser } from 'queries';
 import * as yup from 'yup';
-
 export interface TeamsJoinRequestBody {
   accessCode: string;
 }
@@ -27,11 +26,7 @@ export default async (
   if (req.method === 'POST') {
     const { accessCode } = req.body;
 
-    const team = await findTeam({
-      where: {
-        accessCode,
-      },
-    });
+    const team = await getTeamByAccessCode(accessCode);
 
     if (!team) {
       return notFound(res, 'message.team-not-found');

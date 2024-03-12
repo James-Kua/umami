@@ -1,54 +1,75 @@
-import { ReactNode } from 'react';
-import { Text, Icon, Icons, GridTable, GridColumn, useBreakpoint } from 'react-basics';
-import { useMessages, useTeamUrl } from 'components/hooks';
-import LinkButton from 'components/common/LinkButton';
+import { ReactNode, useContext } from 'react';
+import Link from 'next/link';
+import { Button, Text, Icon, Icons, GridTable, GridColumn, useBreakpoint } from 'react-basics';
+import useMessages from 'components/hooks/useMessages';
+import useUser from 'components/hooks/useUser';
+import SettingsContext from '../SettingsContext';
 
 export interface WebsitesTableProps {
   data: any[];
+  showTeam?: boolean;
   showActions?: boolean;
   allowEdit?: boolean;
   allowView?: boolean;
-  teamId?: string;
   children?: ReactNode;
 }
 
 export function WebsitesTable({
   data = [],
+  showTeam,
   showActions,
   allowEdit,
   allowView,
   children,
 }: WebsitesTableProps) {
   const { formatMessage, labels } = useMessages();
+  const { user } = useUser();
   const breakpoint = useBreakpoint();
-  const { renderTeamUrl } = useTeamUrl();
+  const { settingsPath, websitesPath } = useContext(SettingsContext);
 
   return (
     <GridTable data={data} cardMode={['xs', 'sm', 'md'].includes(breakpoint)}>
       <GridColumn name="name" label={formatMessage(labels.name)} />
       <GridColumn name="domain" label={formatMessage(labels.domain)} />
+      {showTeam && (
+        <GridColumn name="teamName" label={formatMessage(labels.teamName)}>
+          {row => row.teamWebsite[0]?.team.name}
+        </GridColumn>
+      )}
+      {showTeam && (
+        <GridColumn name="owner" label={formatMessage(labels.owner)}>
+          {row => row.user.username}
+        </GridColumn>
+      )}
       {showActions && (
         <GridColumn name="action" label=" " alignment="end">
           {row => {
-            const { id: websiteId } = row;
+            const {
+              id,
+              user: { id: ownerId },
+            } = row;
 
             return (
               <>
-                {allowEdit && (
-                  <LinkButton href={renderTeamUrl(`/settings/websites/${websiteId}`)}>
-                    <Icon data-test="link-button-edit">
-                      <Icons.Edit />
-                    </Icon>
-                    <Text>{formatMessage(labels.edit)}</Text>
-                  </LinkButton>
+                {allowEdit && (!showTeam || ownerId === user.id) && (
+                  <Link href={`${settingsPath}/${id}`}>
+                    <Button>
+                      <Icon>
+                        <Icons.Edit />
+                      </Icon>
+                      <Text>{formatMessage(labels.edit)}</Text>
+                    </Button>
+                  </Link>
                 )}
                 {allowView && (
-                  <LinkButton href={renderTeamUrl(`/websites/${websiteId}`)}>
-                    <Icon>
-                      <Icons.ArrowRight />
-                    </Icon>
-                    <Text>{formatMessage(labels.view)}</Text>
-                  </LinkButton>
+                  <Link href={`${websitesPath}/${id}`}>
+                    <Button>
+                      <Icon>
+                        <Icons.External />
+                      </Icon>
+                      <Text>{formatMessage(labels.view)}</Text>
+                    </Button>
+                  </Link>
                 )}
               </>
             );

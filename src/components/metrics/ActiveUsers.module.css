@@ -1,7 +1,7 @@
 .container {
   display: flex;
   align-items: center;
-  margin-inline-start: 20px;
+  margin-left: 20px;
 }
 
 .text {
@@ -13,5 +13,5 @@
 
 .value {
   font-weight: 600;
-  margin-inline-end: 4px;
+  margin-right: 4px;
 }

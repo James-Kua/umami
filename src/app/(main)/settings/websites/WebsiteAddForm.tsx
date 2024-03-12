@@ -7,23 +7,18 @@ import {
   Button,
   SubmitButton,
 } from 'react-basics';
-import { useApi } from 'components/hooks';
+import useApi from 'components/hooks/useApi';
 import { DOMAIN_REGEX } from 'lib/constants';
-import { useMessages } from 'components/hooks';
+import useMessages from 'components/hooks/useMessages';
+import { useContext } from 'react';
+import SettingsContext from '../SettingsContext';
 
-export function WebsiteAddForm({
-  teamId,
-  onSave,
-  onClose,
-}: {
-  teamId?: string;
-  onSave?: () => void;
-  onClose?: () => void;
-}) {
+export function WebsiteAddForm({ onSave, onClose }: { onSave?: () => void; onClose?: () => void }) {
   const { formatMessage, labels, messages } = useMessages();
+  const { websitesUrl } = useContext(SettingsContext);
   const { post, useMutation } = useApi();
   const { mutate, error, isPending } = useMutation({
-    mutationFn: (data: any) => post('/websites', { ...data, teamId }),
+    mutationFn: (data: any) => post(websitesUrl, data),
   });
 
   const handleSubmit = async (data: any) => {
@@ -38,17 +33,12 @@ export function WebsiteAddForm({
   return (
     <Form onSubmit={handleSubmit} error={error}>
       <FormRow label={formatMessage(labels.name)}>
-        <FormInput
-          data-test="input-name"
-          name="name"
-          rules={{ required: formatMessage(labels.required) }}
-        >
+        <FormInput name="name" rules={{ required: formatMessage(labels.required) }}>
           <TextField autoComplete="off" />
         </FormInput>
       </FormRow>
       <FormRow label={formatMessage(labels.domain)}>
         <FormInput
-          data-test="input-domain"
           name="domain"
           rules={{
             required: formatMessage(labels.required),
@@ -59,7 +49,7 @@ export function WebsiteAddForm({
         </FormInput>
       </FormRow>
       <FormButtons flex>
-        <SubmitButton data-test="button-submit" variant="primary" disabled={false}>
+        <SubmitButton variant="primary" disabled={false}>
           {formatMessage(labels.save)}
         </SubmitButton>
         {onClose && (

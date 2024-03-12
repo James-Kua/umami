@@ -9,8 +9,12 @@ import {
   methodNotAllowed,
   ok,
 } from 'next-basics';
-import { getUser, updateUser } from 'queries';
+import { getUserById, updateUser } from 'queries';
 import * as yup from 'yup';
+
+export interface UserPasswordRequestQuery {
+  id: string;
+}
 
 export interface UserPasswordRequestBody {
   currentPassword: string;
@@ -25,7 +29,7 @@ const schema = {
 };
 
 export default async (
-  req: NextApiRequestQueryBody<any, UserPasswordRequestBody>,
+  req: NextApiRequestQueryBody<UserPasswordRequestQuery, UserPasswordRequestBody>,
   res: NextApiResponse<User>,
 ) => {
   if (process.env.CLOUD_MODE) {
@@ -36,10 +40,10 @@ export default async (
   await useValidate(schema, req, res);
 
   const { currentPassword, newPassword } = req.body;
-  const { id: userId } = req.auth.user;
+  const { id } = req.auth.user;
 
   if (req.method === 'POST') {
-    const user = await getUser(userId, { includePassword: true });
+    const user = await getUserById(id, { includePassword: true });
 
     if (!checkPassword(currentPassword, user.password)) {
       return badRequest(res, 'Current password is incorrect');
@@ -47,7 +51,7 @@ export default async (
 
     const password = hashPassword(newPassword);
 
-    const updated = await updateUser(userId, { password });
+    const updated = await updateUser({ password }, { id });
 
     return ok(res, updated);
   }

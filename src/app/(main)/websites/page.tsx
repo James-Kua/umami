@@ -1,10 +1,16 @@
-import WebsitesPage from './WebsitesPage';
+import WebsitesHeader from 'app/(main)/settings/websites/WebsitesHeader';
+import WebsitesBrowse from './WebsitesBrowse';
 import { Metadata } from 'next';
 
-export default function ({ params: { teamId, userId } }) {
-  return <WebsitesPage teamId={teamId} userId={userId} />;
+export default function WebsitesPage() {
+  return (
+    <>
+      <WebsitesHeader showActions={false} />
+      <WebsitesBrowse />
+    </>
+  );
 }
 
 export const metadata: Metadata = {
-  title: 'Websites',
+  title: 'Websites | umami',
 };

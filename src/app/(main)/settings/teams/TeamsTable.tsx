@@ -1,18 +1,15 @@
-import { GridColumn, GridTable, Icon, Text, useBreakpoint } from 'react-basics';
-import { useMessages } from 'components/hooks';
-import Icons from 'components/icons';
+'use client';
+import useMessages from 'components/hooks/useMessages';
+import useUser from 'components/hooks/useUser';
 import { ROLES } from 'lib/constants';
-import LinkButton from 'components/common/LinkButton';
+import Link from 'next/link';
+import { Button, GridColumn, GridTable, Icon, Icons, Text, useBreakpoint } from 'react-basics';
+import TeamDeleteButton from './TeamDeleteButton';
+import TeamLeaveButton from './TeamLeaveButton';
 
-export function TeamsTable({
-  data = [],
-  showActions = true,
-}: {
-  data: any[];
-  allowEdit?: boolean;
-  showActions?: boolean;
-}) {
+export function TeamsTable({ data = [] }: { data: any[] }) {
   const { formatMessage, labels } = useMessages();
+  const { user } = useUser();
   const breakpoint = useBreakpoint();
 
   return (
@@ -21,28 +18,28 @@ export function TeamsTable({
       <GridColumn name="owner" label={formatMessage(labels.owner)}>
         {row => row.teamUser.find(({ role }) => role === ROLES.teamOwner)?.user?.username}
       </GridColumn>
-      <GridColumn name="websites" label={formatMessage(labels.websites)}>
-        {row => row._count.website}
-      </GridColumn>
-      <GridColumn name="members" label={formatMessage(labels.members)}>
-        {row => row._count.teamUser}
-      </GridColumn>
-      {showActions && (
-        <GridColumn name="action" label=" " alignment="end">
-          {row => {
-            const { id } = row;
+      <GridColumn name="action" label=" " alignment="end">
+        {row => {
+          const { id, name, teamUser } = row;
+          const owner = teamUser.find(({ role }) => role === ROLES.teamOwner);
+          const isOwner = user.id === owner?.userId;
 
-            return (
-              <LinkButton href={`/teams/${id}/settings`}>
-                <Icon>
-                  <Icons.ArrowRight />
-                </Icon>
-                <Text>{formatMessage(labels.view)}</Text>
-              </LinkButton>
-            );
-          }}
-        </GridColumn>
-      )}
+          return (
+            <>
+              {isOwner && <TeamDeleteButton teamId={id} teamName={name} />}
+              {!isOwner && <TeamLeaveButton teamId={id} teamName={name} />}
+              <Link href={`/settings/teams/${id}`}>
+                <Button>
+                  <Icon>
+                    <Icons.Edit />
+                  </Icon>
+                  <Text>{formatMessage(isOwner ? labels.edit : labels.view)}</Text>
+                </Button>
+              </Link>
+            </>
+          );
+        }}
+      </GridColumn>
     </GridTable>
   );
 }

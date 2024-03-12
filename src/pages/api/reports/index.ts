@@ -1,12 +1,13 @@
 import { uuid } from 'lib/crypto';
 import { useAuth, useCors, useValidate } from 'lib/middleware';
-import { NextApiRequestQueryBody } from 'lib/types';
+import { NextApiRequestQueryBody, SearchFilter } from 'lib/types';
 import { pageInfo } from 'lib/schema';
 import { NextApiResponse } from 'next';
-import { methodNotAllowed, ok, unauthorized } from 'next-basics';
-import { createReport, getReports } from 'queries';
+import { methodNotAllowed, ok } from 'next-basics';
+import { createReport, getReportsByUserId } from 'queries';
 import * as yup from 'yup';
-import { canUpdateWebsite, canViewTeam, canViewWebsite } from 'lib/auth';
+
+export interface ReportsRequestQuery extends SearchFilter {}
 
 export interface ReportRequestBody {
   websiteId: string;
@@ -49,49 +50,20 @@ export default async (
   } = req.auth;
 
   if (req.method === 'GET') {
-    const { page, query, pageSize, websiteId, teamId } = req.query;
-    const filters = {
+    const { page, query, pageSize } = req.query;
+
+    const data = await getReportsByUserId(userId, {
       page,
-      pageSize,
+      pageSize: +pageSize || undefined,
       query,
-    };
-
-    if (
-      (websiteId && !(await canViewWebsite(req.auth, websiteId))) ||
-      (teamId && !(await canViewTeam(req.auth, teamId)))
-    ) {
-      return unauthorized(res);
-    }
-
-    const data = await getReports(
-      {
-        where: {
-          userId: !teamId && !websiteId ? userId : undefined,
-          websiteId,
-          website: {
-            teamId,
-          },
-        },
-        include: {
-          website: {
-            select: {
-              domain: true,
-            },
-          },
-        },
-      },
-      filters,
-    );
+      includeTeams: true,
+    });
 
     return ok(res, data);
   }
 
   if (req.method === 'POST') {
     const { websiteId, type, name, description, parameters } = req.body;
-
-    if (!(await canUpdateWebsite(req.auth, websiteId))) {
-      return unauthorized(res);
-    }
 
     const result = await createReport({
       id: uuid(),

@@ -1,3 +1,4 @@
+'use client';
 import {
   Form,
   FormRow,
@@ -9,9 +10,10 @@ import {
   Icon,
 } from 'react-basics';
 import { useRouter } from 'next/navigation';
-import { useApi, useMessages } from 'components/hooks';
+import useApi from 'components/hooks/useApi';
 import { setUser } from 'store/app';
 import { setClientAuthToken } from 'lib/client';
+import useMessages from 'components/hooks/useMessages';
 import Logo from 'assets/logo.svg';
 import styles from './LoginForm.module.css';
 
@@ -23,13 +25,13 @@ export function LoginForm() {
     mutationFn: (data: any) => post('/auth/login', data),
   });
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async data => {
     mutate(data, {
       onSuccess: async ({ token, user }) => {
         setClientAuthToken(token);
         setUser(user);
 
-        router.push('/dashboard');
+        await router.push('/dashboard');
       },
     });
   };
@@ -42,30 +44,17 @@ export function LoginForm() {
       <div className={styles.title}>umami</div>
       <Form className={styles.form} onSubmit={handleSubmit} error={getMessage(error)}>
         <FormRow label={formatMessage(labels.username)}>
-          <FormInput
-            data-test="input-username"
-            name="username"
-            rules={{ required: formatMessage(labels.required) }}
-          >
+          <FormInput name="username" rules={{ required: formatMessage(labels.required) }}>
             <TextField autoComplete="off" />
           </FormInput>
         </FormRow>
         <FormRow label={formatMessage(labels.password)}>
-          <FormInput
-            data-test="input-password"
-            name="password"
-            rules={{ required: formatMessage(labels.required) }}
-          >
+          <FormInput name="password" rules={{ required: formatMessage(labels.required) }}>
             <PasswordField />
           </FormInput>
         </FormRow>
         <FormButtons>
-          <SubmitButton
-            data-test="button-submit"
-            className={styles.button}
-            variant="primary"
-            disabled={isPending}
-          >
+          <SubmitButton className={styles.button} variant="primary" disabled={isPending}>
             {formatMessage(labels.login)}
           </SubmitButton>
         </FormButtons>

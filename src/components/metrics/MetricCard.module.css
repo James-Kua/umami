@@ -13,7 +13,6 @@
   font-weight: 700;
   white-space: nowrap;
   min-height: 60px;
-  color: var(--base900);
 }
 
 .label {
@@ -23,7 +22,6 @@
   gap: 10px;
   white-space: nowrap;
   min-height: 30px;
-  color: var(--base800);
 }
 
 .change {

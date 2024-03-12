@@ -1,30 +1,32 @@
+'use client';
 import { useState, useMemo } from 'react';
 import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
 import classNames from 'classnames';
-import { Button, Loading } from 'react-basics';
+import { Button } from 'react-basics';
 import { firstBy } from 'thenby';
 import useDashboard, { saveDashboard } from 'store/dashboard';
-import { useMessages, useWebsites } from 'components/hooks';
+import useMessages from 'components/hooks/useMessages';
+import useApi from 'components/hooks/useApi';
 import styles from './DashboardEdit.module.css';
 
-const DRAG_ID = 'dashboard-website-ordering';
+const dragId = 'dashboard-website-ordering';
 
-export function DashboardEdit({ teamId }: { teamId: string }) {
+export function DashboardEdit() {
   const settings = useDashboard();
   const { websiteOrder } = settings;
   const { formatMessage, labels } = useMessages();
   const [order, setOrder] = useState(websiteOrder || []);
-  const {
-    result,
-    query: { isLoading },
-  } = useWebsites({ teamId });
-
-  const websites = result?.data;
+  const { get, useQuery } = useApi();
+  const { data: result } = useQuery({
+    queryKey: ['websites'],
+    queryFn: () => get('/websites', { includeTeams: 1 }),
+  });
+  const { data: websites } = result || {};
 
   const ordered = useMemo(() => {
     if (websites) {
       return websites
-        .map((website: { id: any }) => ({ ...website, order: order.indexOf(website.id) }))
+        .map(website => ({ ...website, order: order.indexOf(website.id) }))
         .sort(firstBy('order'));
     }
     return [];
@@ -55,10 +57,6 @@ export function DashboardEdit({ teamId }: { teamId: string }) {
     setOrder([]);
   }
 
-  if (isLoading) {
-    return <Loading />;
-  }
-
   return (
     <>
       <div className={styles.buttons}>
@@ -74,7 +72,7 @@ export function DashboardEdit({ teamId }: { teamId: string }) {
       </div>
       <div className={styles.dragActive}>
         <DragDropContext onDragEnd={handleWebsiteDrag}>
-          <Droppable droppableId={DRAG_ID}>
+          <Droppable droppableId={dragId}>
             {(provided, snapshot) => (
               <div
                 {...provided.droppableProps}
@@ -82,7 +80,7 @@ export function DashboardEdit({ teamId }: { teamId: string }) {
                 style={{ marginBottom: snapshot.isDraggingOver ? 260 : null }}
               >
                 {ordered.map(({ id, name, domain }, index) => (
-                  <Draggable key={id} draggableId={`${DRAG_ID}-${id}`} index={index}>
+                  <Draggable key={id} draggableId={`${dragId}-${id}`} index={index}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}

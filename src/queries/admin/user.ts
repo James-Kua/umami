@@ -4,25 +4,24 @@ import { ROLES } from 'lib/constants';
 import prisma from 'lib/prisma';
 import { FilterResult, Role, User, UserSearchFilter } from 'lib/types';
 import { getRandomChars } from 'next-basics';
-import UserFindManyArgs = Prisma.UserFindManyArgs;
 
 export interface GetUserOptions {
   includePassword?: boolean;
   showDeleted?: boolean;
 }
 
-async function findUser(
-  criteria: Prisma.UserFindUniqueArgs,
+async function getUser(
+  where: Prisma.UserWhereUniqueInput,
   options: GetUserOptions = {},
 ): Promise<User> {
   const { includePassword = false, showDeleted = false } = options;
 
+  if (showDeleted) {
+    where.deletedAt = null;
+  }
+
   return prisma.client.user.findUnique({
-    ...criteria,
-    where: {
-      ...criteria.where,
-      ...(showDeleted && { deletedAt: null }),
-    },
+    where,
     select: {
       id: true,
       username: true,
@@ -33,43 +32,82 @@ async function findUser(
   });
 }
 
-export async function getUser(userId: string, options: GetUserOptions = {}) {
-  return findUser(
-    {
-      where: {
-        id: userId,
-      },
-    },
-    options,
-  );
+export async function getUserById(id: string, options: GetUserOptions = {}) {
+  return getUser({ id }, options);
 }
 
 export async function getUserByUsername(username: string, options: GetUserOptions = {}) {
-  return findUser({ where: { username } }, options);
+  return getUser({ username }, options);
 }
 
 export async function getUsers(
-  criteria: UserFindManyArgs,
-  filters?: UserSearchFilter,
+  params: UserSearchFilter,
+  options?: { include?: Prisma.UserInclude },
 ): Promise<FilterResult<User[]>> {
-  const { query } = filters;
+  const { teamId, query } = params;
+  const mode = prisma.getSearchMode();
 
   const where: Prisma.UserWhereInput = {
-    ...criteria.where,
-    ...prisma.getSearchParameters(query, [{ username: 'contains' }]),
-    deletedAt: null,
+    ...(teamId && {
+      teamUser: {
+        some: {
+          teamId,
+        },
+      },
+    }),
+    ...(query && {
+      AND: {
+        OR: [
+          {
+            username: {
+              contains: query,
+              ...mode,
+            },
+          },
+        ],
+      },
+    }),
   };
 
-  return prisma.pagedQuery(
-    'user',
-    {
-      ...criteria,
-      where,
+  const [pageFilters, getParameters] = prisma.getPageFilters({
+    orderBy: 'username',
+    ...params,
+  });
+
+  const users = await prisma.client.user
+    .findMany({
+      where: {
+        ...where,
+        deletedAt: null,
+      },
+      ...pageFilters,
+      ...(options?.include && { include: options.include }),
+    })
+    .then(a => {
+      return a.map(({ password, ...rest }) => rest);
+    });
+
+  const count = await prisma.client.user.count({
+    where: {
+      ...where,
+      deletedAt: null,
     },
+  });
+
+  return { data: users as any, count, ...getParameters };
+}
+
+export async function getUsersByTeamId(teamId: string, filter?: UserSearchFilter) {
+  return getUsers(
+    { teamId, ...filter },
     {
-      orderBy: 'createdAt',
-      sortDescending: true,
-      ...filters,
+      include: {
+        teamUser: {
+          select: {
+            role: true,
+          },
+        },
+      },
     },
   );
 }
@@ -94,11 +132,12 @@ export async function createUser(data: {
   });
 }
 
-export async function updateUser(userId: string, data: Prisma.UserUpdateInput): Promise<User> {
+export async function updateUser(
+  data: Prisma.UserUpdateInput,
+  where: Prisma.UserWhereUniqueInput,
+): Promise<User> {
   return prisma.client.user.update({
-    where: {
-      id: userId,
-    },
+    where,
     data,
     select: {
       id: true,
@@ -122,7 +161,7 @@ export async function deleteUser(
     User,
   ]
 > {
-  const { client, transaction } = prisma;
+  const { client } = prisma;
   const cloudMode = process.env.CLOUD_MODE;
 
   const websites = await client.website.findMany({
@@ -148,88 +187,110 @@ export async function deleteUser(
 
   const teamIds = teams.map(a => a.id);
 
-  if (cloudMode) {
-    return transaction([
-      client.website.updateMany({
-        data: {
-          deletedAt: new Date(),
-        },
-        where: { id: { in: websiteIds } },
+  return prisma
+    .transaction([
+      client.eventData.deleteMany({
+        where: { websiteId: { in: websiteIds } },
       }),
-      client.user.update({
-        data: {
-          username: getRandomChars(32),
-          deletedAt: new Date(),
-        },
+      client.websiteEvent.deleteMany({
+        where: { websiteId: { in: websiteIds } },
+      }),
+      client.session.deleteMany({
+        where: { websiteId: { in: websiteIds } },
+      }),
+      client.teamWebsite.deleteMany({
         where: {
-          id: userId,
+          OR: [
+            {
+              websiteId: {
+                in: websiteIds,
+              },
+            },
+            {
+              teamId: {
+                in: teamIds,
+              },
+            },
+          ],
         },
       }),
-    ]);
-  }
-
-  return transaction([
-    client.eventData.deleteMany({
-      where: { websiteId: { in: websiteIds } },
-    }),
-    client.websiteEvent.deleteMany({
-      where: { websiteId: { in: websiteIds } },
-    }),
-    client.session.deleteMany({
-      where: { websiteId: { in: websiteIds } },
-    }),
-    client.teamUser.deleteMany({
-      where: {
-        OR: [
-          {
-            teamId: {
-              in: teamIds,
-            },
+      client.teamWebsite.deleteMany({
+        where: {
+          teamId: {
+            in: teamIds,
           },
-          {
-            userId,
-          },
-        ],
-      },
-    }),
-    client.team.deleteMany({
-      where: {
-        id: {
-          in: teamIds,
         },
-      },
-    }),
-    client.report.deleteMany({
-      where: {
-        OR: [
-          {
-            websiteId: {
-              in: websiteIds,
+      }),
+      client.teamUser.deleteMany({
+        where: {
+          OR: [
+            {
+              teamId: {
+                in: teamIds,
+              },
             },
+            {
+              userId,
+            },
+          ],
+        },
+      }),
+      client.team.deleteMany({
+        where: {
+          id: {
+            in: teamIds,
           },
-          {
-            userId,
-          },
-        ],
-      },
-    }),
-    client.website.deleteMany({
-      where: { id: { in: websiteIds } },
-    }),
-    client.user.delete({
-      where: {
-        id: userId,
-      },
-    }),
-  ]).then(async data => {
-    if (cache.enabled) {
-      const ids = websites.map(a => a.id);
+        },
+      }),
+      client.report.deleteMany({
+        where: {
+          OR: [
+            {
+              websiteId: {
+                in: websiteIds,
+              },
+            },
+            {
+              userId,
+            },
+          ],
+        },
+      }),
+      cloudMode
+        ? client.website.updateMany({
+            data: {
+              deletedAt: new Date(),
+            },
+            where: { id: { in: websiteIds } },
+          })
+        : client.website.deleteMany({
+            where: { id: { in: websiteIds } },
+          }),
+      cloudMode
+        ? client.user.update({
+            data: {
+              username: getRandomChars(32),
+              deletedAt: new Date(),
+            },
+            where: {
+              id: userId,
+            },
+          })
+        : client.user.delete({
+            where: {
+              id: userId,
+            },
+          }),
+    ])
+    .then(async data => {
+      if (cache.enabled) {
+        const ids = websites.map(a => a.id);
 
-      for (let i = 0; i < ids.length; i++) {
-        await cache.deleteWebsite(`website:${ids[i]}`);
+        for (let i = 0; i < ids.length; i++) {
+          await cache.deleteWebsite(`website:${ids[i]}`);
+        }
       }
-    }
 
-    return data;
-  });
+      return data;
+    });
 }

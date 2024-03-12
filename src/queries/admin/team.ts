@@ -3,92 +3,38 @@ import { ROLES } from 'lib/constants';
 import { uuid } from 'lib/crypto';
 import prisma from 'lib/prisma';
 import { FilterResult, TeamSearchFilter } from 'lib/types';
-import TeamFindManyArgs = Prisma.TeamFindManyArgs;
 
-export async function findTeam(criteria: Prisma.TeamFindUniqueArgs): Promise<Team> {
-  return prisma.client.team.findUnique(criteria);
+export interface GetTeamOptions {
+  includeTeamUser?: boolean;
 }
 
-export async function getTeam(teamId: string, options: { includeMembers?: boolean } = {}) {
-  const { includeMembers } = options;
+async function getTeam(where: Prisma.TeamWhereInput, options: GetTeamOptions = {}): Promise<Team> {
+  const { includeTeamUser = false } = options;
 
-  return findTeam({
-    where: {
-      id: teamId,
+  return prisma.client.team.findFirst({
+    where,
+    include: {
+      teamUser: includeTeamUser,
     },
-    ...(includeMembers && { include: { teamUser: true } }),
   });
 }
 
-export async function getTeams(
-  criteria: TeamFindManyArgs,
-  filters: TeamSearchFilter = {},
-): Promise<FilterResult<Team[]>> {
-  const { getSearchParameters } = prisma;
-  const { query } = filters;
-
-  const where: Prisma.TeamWhereInput = {
-    ...criteria.where,
-    ...getSearchParameters(query, [{ name: 'contains' }]),
-  };
-
-  return prisma.pagedQuery<TeamFindManyArgs>(
-    'team',
-    {
-      ...criteria,
-      where,
-    },
-    filters,
-  );
+export function getTeamById(teamId: string, options: GetTeamOptions = {}) {
+  return getTeam({ id: teamId }, options);
 }
 
-export async function getUserTeams(userId: string, filters: TeamSearchFilter = {}) {
-  return getTeams(
-    {
-      where: {
-        deletedAt: null,
-        teamUser: {
-          some: { userId },
-        },
-      },
-      include: {
-        teamUser: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            website: {
-              where: { deletedAt: null },
-            },
-            teamUser: {
-              where: {
-                user: { deletedAt: null },
-              },
-            },
-          },
-        },
-      },
-    },
-    filters,
-  );
+export function getTeamByAccessCode(accessCode: string, options: GetTeamOptions = {}) {
+  return getTeam({ accessCode }, options);
 }
 
-export async function createTeam(data: Prisma.TeamCreateInput, userId: string): Promise<any> {
+export async function createTeam(data: Prisma.TeamCreateInput, userId: string): Promise<Team> {
   const { id } = data;
-  const { client, transaction } = prisma;
 
-  return transaction([
-    client.team.create({
+  return prisma.transaction([
+    prisma.client.team.create({
       data,
     }),
-    client.teamUser.create({
+    prisma.client.teamUser.create({
       data: {
         id: uuid(),
         teamId: id,
@@ -100,9 +46,7 @@ export async function createTeam(data: Prisma.TeamCreateInput, userId: string): 
 }
 
 export async function updateTeam(teamId: string, data: Prisma.TeamUpdateInput): Promise<Team> {
-  const { client } = prisma;
-
-  return client.team.update({
+  return prisma.client.team.update({
     where: {
       id: teamId,
     },
@@ -117,22 +61,13 @@ export async function deleteTeam(
   teamId: string,
 ): Promise<Promise<[Prisma.BatchPayload, Prisma.BatchPayload, Team]>> {
   const { client, transaction } = prisma;
-  const cloudMode = process.env.CLOUD_MODE;
-
-  if (cloudMode) {
-    return transaction([
-      client.team.update({
-        data: {
-          deletedAt: new Date(),
-        },
-        where: {
-          id: teamId,
-        },
-      }),
-    ]);
-  }
 
   return transaction([
+    client.teamWebsite.deleteMany({
+      where: {
+        teamId,
+      },
+    }),
     client.teamUser.deleteMany({
       where: {
         teamId,
@@ -144,4 +79,82 @@ export async function deleteTeam(
       },
     }),
   ]);
+}
+
+export async function getTeams(
+  filters: TeamSearchFilter,
+  options?: { include?: Prisma.TeamInclude },
+): Promise<FilterResult<Team[]>> {
+  const { userId, query } = filters;
+  const mode = prisma.getSearchMode();
+
+  const where: Prisma.TeamWhereInput = {
+    ...(userId && {
+      teamUser: {
+        some: { userId },
+      },
+    }),
+    ...(query && {
+      AND: {
+        OR: [
+          {
+            name: { startsWith: query, ...mode },
+          },
+          {
+            teamUser: {
+              some: {
+                role: ROLES.teamOwner,
+                user: {
+                  username: {
+                    startsWith: query,
+                    ...mode,
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    }),
+  };
+
+  const [pageFilters, getParameters] = prisma.getPageFilters({
+    orderBy: 'name',
+    ...filters,
+  });
+
+  const teams = await prisma.client.team.findMany({
+    where: {
+      ...where,
+    },
+    ...pageFilters,
+    ...(options?.include && { include: options?.include }),
+  });
+
+  const count = await prisma.client.team.count({ where });
+
+  return { data: teams, count, ...getParameters };
+}
+
+export async function getTeamsByUserId(
+  userId: string,
+  filter?: TeamSearchFilter,
+): Promise<FilterResult<Team[]>> {
+  return getTeams(
+    { userId, ...filter },
+    {
+      include: {
+        teamUser: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        },
+      },
+    },
+  );
 }

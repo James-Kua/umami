@@ -1,11 +1,12 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { IntlProvider } from 'react-intl';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactBasicsProvider } from 'react-basics';
 import ErrorBoundary from 'components/common/ErrorBoundary';
-import { useLocale } from 'components/hooks';
+import SettingsContext from 'app/(main)/settings/SettingsContext';
+import useLocale from 'components/hooks/useLocale';
 import 'chartjs-adapter-date-fns';
-import { useEffect } from 'react';
 
 const client = new QueryClient({
   defaultOptions: {
@@ -17,13 +18,7 @@ const client = new QueryClient({
 });
 
 function MessagesProvider({ children }) {
-  const { locale, messages, dir } = useLocale();
-
-  useEffect(() => {
-    document.documentElement.setAttribute('dir', dir);
-    document.documentElement.setAttribute('lang', locale);
-  }, [locale, dir]);
-
+  const { locale, messages } = useLocale();
   return (
     <IntlProvider locale={locale} messages={messages[locale]} onError={() => null}>
       {children}
@@ -31,14 +26,34 @@ function MessagesProvider({ children }) {
   );
 }
 
+function SettingsProvider({ children }) {
+  const [config, setConfig] = useState({});
+
+  useEffect(() => {
+    const hostUrl = process.env.hostUrl || window?.location.origin;
+
+    setConfig({
+      shareUrl: hostUrl,
+      trackingCodeUrl: hostUrl,
+      websitesUrl: '/websites',
+      settingsPath: '/settings/websites',
+      websitesPath: `/websites`,
+    });
+  }, []);
+
+  return <SettingsContext.Provider value={config}>{children}</SettingsContext.Provider>;
+}
+
 export function Providers({ children }) {
   return (
     <MessagesProvider>
-      <QueryClientProvider client={client}>
-        <ReactBasicsProvider>
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </ReactBasicsProvider>
-      </QueryClientProvider>
+      <SettingsProvider>
+        <QueryClientProvider client={client}>
+          <ReactBasicsProvider>
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </ReactBasicsProvider>
+        </QueryClientProvider>
+      </SettingsProvider>
     </MessagesProvider>
   );
 }

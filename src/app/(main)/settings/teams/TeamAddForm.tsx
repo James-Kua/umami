@@ -1,13 +1,15 @@
-import { useApi, useMessages } from 'components/hooks';
 import {
-  Button,
   Form,
-  FormButtons,
-  FormInput,
   FormRow,
-  SubmitButton,
+  FormInput,
+  FormButtons,
   TextField,
+  Button,
+  SubmitButton,
 } from 'react-basics';
+import { setValue } from 'store/cache';
+import useApi from 'components/hooks/useApi';
+import useMessages from 'components/hooks/useMessages';
 
 export function TeamAddForm({ onSave, onClose }: { onSave: () => void; onClose: () => void }) {
   const { formatMessage, labels } = useMessages();
@@ -16,9 +18,10 @@ export function TeamAddForm({ onSave, onClose }: { onSave: () => void; onClose: 
     mutationFn: (data: any) => post('/teams', data),
   });
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async data => {
     mutate(data, {
       onSuccess: async () => {
+        setValue('teams', Date.now());
         onSave?.();
         onClose?.();
       },

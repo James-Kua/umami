@@ -1,35 +1,37 @@
-import { useLocale, useLogin, useMessages, useModified } from 'components/hooks';
-import { useRouter } from 'next/navigation';
 import { Button, Icon, Icons, Modal, ModalTrigger, Text } from 'react-basics';
+import useMessages from 'components/hooks/useMessages';
+import useLocale from 'components/hooks/useLocale';
+import useUser from 'components/hooks/useUser';
 import TeamDeleteForm from './TeamLeaveForm';
 
-export function TeamLeaveButton({ teamId, teamName }: { teamId: string; teamName: string }) {
+export function TeamLeaveButton({
+  teamId,
+  teamName,
+  onLeave,
+}: {
+  teamId: string;
+  teamName: string;
+  onLeave?: () => void;
+}) {
   const { formatMessage, labels } = useMessages();
-  const router = useRouter();
   const { dir } = useLocale();
-  const { user } = useLogin();
-  const { touch } = useModified();
-
-  const handleLeave = async () => {
-    touch('teams');
-    router.push('/settings/teams');
-  };
+  const { user } = useUser();
 
   return (
     <ModalTrigger>
-      <Button variant="secondary">
+      <Button>
         <Icon rotate={dir === 'rtl' ? 180 : 0}>
           <Icons.Logout />
         </Icon>
         <Text>{formatMessage(labels.leave)}</Text>
       </Button>
       <Modal title={formatMessage(labels.leaveTeam)}>
-        {(close: () => void) => (
+        {close => (
           <TeamDeleteForm
             teamId={teamId}
             userId={user.id}
             teamName={teamName}
-            onSave={handleLeave}
+            onSave={onLeave}
             onClose={close}
           />
         )}

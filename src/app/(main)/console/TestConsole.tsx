@@ -1,12 +1,15 @@
+'use client';
 import { Button } from 'react-basics';
+import Head from 'next/head';
 import Link from 'next/link';
 import Script from 'next/script';
 import WebsiteSelect from 'components/input/WebsiteSelect';
 import Page from 'components/layout/Page';
 import PageHeader from 'components/layout/PageHeader';
 import EventsChart from 'components/metrics/EventsChart';
-import WebsiteChart from '../websites/[websiteId]/WebsiteChart';
-import { useApi, useNavigation } from 'components/hooks';
+import WebsiteChart from 'app/(main)/websites/[id]/WebsiteChart';
+import useApi from 'components/hooks/useApi';
+import useNavigation from 'components/hooks/useNavigation';
 import styles from './TestConsole.module.css';
 
 export function TestConsole({ websiteId }: { websiteId: string }) {
@@ -72,19 +75,22 @@ export function TestConsole({ websiteId }: { websiteId: string }) {
 
   return (
     <Page isLoading={isLoading} error={error}>
+      <Head>
+        <title>{website ? `${website.name} | Umami Console` : 'Umami Console'}</title>
+      </Head>
       <PageHeader title="Test console">
         <WebsiteSelect websiteId={website?.id} onSelect={handleChange} />
       </PageHeader>
       {website && (
-        <div className={styles.container}>
+        <>
           <Script
             async
             data-website-id={websiteId}
             src={`${process.env.basePath}/script.js`}
             data-cache="true"
           />
-          <div className={styles.actions}>
-            <div className={styles.group}>
+          <div className={styles.test}>
+            <div>
               <div className={styles.header}>Page links</div>
               <div>
                 <Link href={`/console/${websiteId}/page/1/?q=abc`}>page one</Link>
@@ -108,11 +114,12 @@ export function TestConsole({ websiteId }: { websiteId: string }) {
                 </a>
               </div>
             </div>
-            <div className={styles.group}>
+            <div>
               <div className={styles.header}>Click events</div>
               <Button id="send-event-button" data-umami-event="button-click" variant="primary">
                 Send event
               </Button>
+              <p />
               <Button
                 id="send-event-data-button"
                 data-umami-event="button-click"
@@ -122,39 +129,23 @@ export function TestConsole({ websiteId }: { websiteId: string }) {
               >
                 Send event with data
               </Button>
-              <Button
-                id="button-with-div-button"
-                data-umami-event="button-click"
-                data-umami-event-name="bob"
-                data-umami-event-id="123"
-                variant="primary"
-              >
-                <div className={styles.wrapped}>Button with div</div>
-              </Button>
-              <div data-umami-event="div-click" className={styles.wrapped}>
-                DIV with attribute
-              </div>
-              <div data-umami-event="div-click-one" className={styles.wrapped}>
-                <div data-umami-event="div-click-two" className={styles.wrapped}>
-                  <div data-umami-event="div-click-three" className={styles.wrapped}>
-                    Nested DIV
-                  </div>
-                </div>
-              </div>
             </div>
-            <div className={styles.group}>
+            <div>
               <div className={styles.header}>Javascript events</div>
               <Button id="manual-button" variant="primary" onClick={handleClick}>
                 Run script
               </Button>
+              <p />
               <Button id="manual-button" variant="primary" onClick={handleIdentifyClick}>
                 Run identify
               </Button>
             </div>
           </div>
-          <WebsiteChart websiteId={website.id} />
-          <EventsChart websiteId={website.id} />
-        </div>
+          <div>
+            <WebsiteChart websiteId={website.id} />
+            <EventsChart websiteId={website.id} />
+          </div>
+        </>
       )}
     </Page>
   );

@@ -1,16 +1,16 @@
 import { useContext } from 'react';
 import { useMessages } from 'components/hooks';
 import { Form, FormButtons, FormRow, SubmitButton } from 'react-basics';
-import { ReportContext } from '../[reportId]/Report';
+import { ReportContext } from '../[id]/Report';
 import { MonthSelect } from 'components/input/MonthSelect';
-import BaseParameters from '../[reportId]/BaseParameters';
+import BaseParameters from '../[id]/BaseParameters';
 import { parseDateRange } from 'lib/date';
 
 export function RetentionParameters() {
   const { report, runReport, isRunning, updateReport } = useContext(ReportContext);
   const { formatMessage, labels } = useMessages();
 
-  const { id, parameters } = report || {};
+  const { parameters } = report || {};
   const { websiteId, dateRange } = parameters || {};
   const { startDate } = dateRange || {};
   const queryDisabled = !websiteId || !dateRange;
@@ -30,7 +30,7 @@ export function RetentionParameters() {
 
   return (
     <Form values={parameters} onSubmit={handleSubmit} preventSubmit={true}>
-      <BaseParameters showDateSelect={false} allowWebsiteSelect={!id} />
+      <BaseParameters showDateSelect={false} />
       <FormRow label={formatMessage(labels.date)}>
         <MonthSelect date={startDate} onChange={handleDateChange} />
       </FormRow>

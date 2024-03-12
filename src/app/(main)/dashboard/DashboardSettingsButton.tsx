@@ -1,7 +1,7 @@
 import { TooltipPopup, Icon, Text, Flexbox, Button } from 'react-basics';
 import Icons from 'components/icons';
 import { saveDashboard } from 'store/dashboard';
-import { useMessages } from 'components/hooks';
+import useMessages from 'components/hooks/useMessages';
 
 export function DashboardSettingsButton() {
   const { formatMessage, labels } = useMessages();

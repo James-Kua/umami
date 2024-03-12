@@ -7,7 +7,7 @@ export function useTimezone() {
   const [timezone, setTimezone] = useState(getItem(TIMEZONE_CONFIG) || getTimezone());
 
   const saveTimezone = useCallback(
-    (value: string) => {
+    value => {
       setItem(TIMEZONE_CONFIG, value);
       setTimezone(value);
     },

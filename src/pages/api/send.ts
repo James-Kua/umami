@@ -1,6 +1,6 @@
 import ipaddr from 'ipaddr.js';
-import { isbot } from 'isbot';
-import { COLLECTION_TYPE, HOSTNAME_REGEX, IP_REGEX } from 'lib/constants';
+import isbot from 'isbot';
+import { COLLECTION_TYPE, HOSTNAME_REGEX } from 'lib/constants';
 import { secret } from 'lib/crypto';
 import { getIpAddress } from 'lib/detect';
 import { useCors, useSession, useValidate } from 'lib/middleware';
@@ -14,7 +14,6 @@ export interface CollectRequestBody {
   payload: {
     data: { [key: string]: any };
     hostname: string;
-    ip: string;
     language: string;
     referrer: string;
     screen: string;
@@ -54,12 +53,11 @@ const schema = {
       .shape({
         data: yup.object(),
         hostname: yup.string().matches(HOSTNAME_REGEX).max(100),
-        ip: yup.string().matches(IP_REGEX),
         language: yup.string().max(35),
-        referrer: yup.string(),
+        referrer: yup.string().max(500),
         screen: yup.string().max(11),
-        title: yup.string(),
-        url: yup.string(),
+        title: yup.string().max(500),
+        url: yup.string().max(500),
         website: yup.string().uuid().required(),
         name: yup.string().max(50),
       })
@@ -133,11 +131,7 @@ export default async (req: NextApiRequestCollect, res: NextApiResponse) => {
         return badRequest(res, 'Data required.');
       }
 
-      await saveSessionData({
-        websiteId: session.websiteId,
-        sessionId: session.id,
-        sessionData: eventData,
-      });
+      await saveSessionData({ ...session, sessionData: eventData, sessionId: session.id });
     }
 
     const token = createToken(session, secret());
